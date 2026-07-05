@@ -1,9 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-// Shared core logic for generating a Modul Ajar via Gemini.
-// Used by both the Vercel handler (api/generate.js) and the
-// Netlify handler (netlify/functions/generate.js) so the prompt
-// and schema only live in one place.
+import { GoogleGenAI } from '@google/genai'
 
 export const RESPONSE_SCHEMA = {
   type: 'object',
@@ -79,10 +74,6 @@ Tugas Anda: susun komponen Modul Ajar berikut, dalam Bahasa Indonesia yang jelas
 Kembalikan HANYA JSON sesuai skema yang diberikan, tanpa teks tambahan apa pun.`
 }
 
-/**
- * Validates input and calls Gemini, returning a plain result object:
- * { ok: true, data } or { ok: false, status, error }
- */
 export async function generateModul({ apiKey, identitas, cp, tp, kegiatan }) {
   if (!apiKey) {
     return { ok: false, status: 500, error: 'GEMINI_API_KEY belum dikonfigurasi di server.' }
@@ -93,19 +84,20 @@ export async function generateModul({ apiKey, identitas, cp, tp, kegiatan }) {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: {
+    const ai = new GoogleGenAI({ apiKey })
+    const prompt = buildPrompt({ identitas, cp, tp, kegiatan })
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA,
         temperature: 0.6,
       },
     })
 
-    const prompt = buildPrompt({ identitas, cp, tp, kegiatan })
-    const result = await model.generateContent(prompt)
-    const text = result.response.text()
+    const text = response.text
 
     let parsed
     try {
