@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #FAF9F4;
+  color: #1C2620;
+  font-family: 'Inter', sans-serif;
+}
+
+::selection {
+  background-color: #D9A441;
+  color: #1F3D2B;
+}
+
+/* visible keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid #D9A441;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Cetak / Print styles: only the module preview is printed */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #cetak-area, #cetak-area * {
+    visibility: visible;
+  }
+  #cetak-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
