@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 function Block({ title, children }) {
   return (
     <div className="mb-6 last:mb-0">
@@ -32,23 +34,66 @@ function TahapKegiatan({ label, items }) {
   )
 }
 
+function KeyValueTable({ rows }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm border border-papan/15">
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i}>
+              <td className="border border-papan/15 px-3 py-2 align-top font-medium w-1/3 bg-kapur">{row.label}</td>
+              <td className="border border-papan/15 px-3 py-2 align-top whitespace-pre-line">{row.value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export default function ModulPreview({ identitas, cp, tp, hasil, onCetak }) {
+  const [downloading, setDownloading] = useState(false)
   const langkah = hasil.langkahPembelajaran || {}
   const asesmen = hasil.asesmen || {}
 
+  async function handleUnduhWord() {
+    setDownloading(true)
+    try {
+      const { exportModulToDocx } = await import('../utils/exportDocx.js')
+      await exportModulToDocx({ identitas, cp, tp, hasil })
+    } catch (err) {
+      console.error('Gagal membuat file Word:', err)
+      alert('Gagal membuat file Word. Silakan coba lagi.')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 no-print">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 no-print">
         <h2 className="font-display text-lg font-semibold text-papan">Pratinjau Modul Ajar</h2>
-        <button
-          onClick={onCetak}
-          className="inline-flex items-center gap-2 rounded-lg bg-papan text-kapur px-4 py-2 text-sm font-medium hover:bg-papan-dark transition-colors"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/>
-          </svg>
-          Cetak ke PDF
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleUnduhWord}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 rounded-lg border border-papan/20 bg-white text-papan px-4 py-2 text-sm font-medium hover:bg-kapur disabled:opacity-50 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {downloading ? 'Menyiapkan...' : 'Unduh Word (.docx)'}
+          </button>
+          <button
+            onClick={onCetak}
+            className="inline-flex items-center gap-2 rounded-lg bg-papan text-kapur px-4 py-2 text-sm font-medium hover:bg-papan-dark transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/>
+            </svg>
+            Cetak ke PDF
+          </button>
+        </div>
       </div>
 
       <div id="cetak-area" className="bg-white rounded-2xl border border-papan/10 shadow-sm p-6 sm:p-10 print:shadow-none print:border-none">
@@ -72,6 +117,27 @@ export default function ModulPreview({ identitas, cp, tp, hasil, onCetak }) {
         <Block title="Tujuan Pembelajaran (TP)">
           <p className="whitespace-pre-line">{tp}</p>
         </Block>
+
+        {hasil.profilPelajarPancasila && (
+          <Block title="Profil Pelajar Pancasila">
+            <ListOrText content={hasil.profilPelajarPancasila} />
+          </Block>
+        )}
+
+        {(hasil.modelPembelajaran || hasil.saranaPrasarana || hasil.targetPesertaDidik) && (
+          <Block title="Identitas Kegiatan">
+            <KeyValueTable
+              rows={[
+                hasil.modelPembelajaran && { label: 'Model Pembelajaran', value: hasil.modelPembelajaran },
+                hasil.saranaPrasarana && {
+                  label: 'Sarana & Prasarana',
+                  value: Array.isArray(hasil.saranaPrasarana) ? hasil.saranaPrasarana.join(', ') : hasil.saranaPrasarana,
+                },
+                hasil.targetPesertaDidik && { label: 'Target Peserta Didik', value: hasil.targetPesertaDidik },
+              ].filter(Boolean)}
+            />
+          </Block>
+        )}
 
         <Block title="Pemahaman Bermakna">
           <ListOrText content={hasil.pemahamanBermakna} />
@@ -116,6 +182,41 @@ export default function ModulPreview({ identitas, cp, tp, hasil, onCetak }) {
             <ListOrText content={hasil.rubrikPenilaian} />
           )}
         </Block>
+
+        {hasil.refleksiGuru && (
+          <Block title="Refleksi Guru">
+            <ListOrText content={hasil.refleksiGuru} />
+          </Block>
+        )}
+
+        {hasil.refleksiPesertaDidik && (
+          <Block title="Refleksi Peserta Didik">
+            <ListOrText content={hasil.refleksiPesertaDidik} />
+          </Block>
+        )}
+
+        {hasil.glosarium && (
+          <Block title="Glosarium">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-papan/15">
+                <tbody>
+                  {hasil.glosarium.map((item, i) => (
+                    <tr key={i}>
+                      <td className="border border-papan/15 px-3 py-2 align-top font-medium w-1/3">{item.istilah}</td>
+                      <td className="border border-papan/15 px-3 py-2 align-top">{item.penjelasan}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Block>
+        )}
+
+        {hasil.daftarPustaka && (
+          <Block title="Daftar Pustaka">
+            <ListOrText content={hasil.daftarPustaka} />
+          </Block>
+        )}
 
         <Block title="Lampiran — Lembar Kerja Peserta Didik (LKPD)">
           <ListOrText content={hasil.lkpd} />
