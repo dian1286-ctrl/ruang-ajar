@@ -50,14 +50,55 @@ function labeledBullets(label, items) {
   ]
 }
 
+function tahapSection(label, tahap) {
+  const durasiSuffix = tahap?.durasi ? ` (${tahap.durasi})` : ''
+  return labeledBullets(`${label}${durasiSuffix}`, tahap?.kegiatan)
+}
+
 function makeCell(text, { bold = false, width, shading } = {}) {
   return new TableCell({
     width: width ? { size: width, type: WidthType.PERCENTAGE } : undefined,
     borders: CELL_BORDERS,
     shading: shading ? { fill: shading } : undefined,
-    children: text
+    children: (text || '-')
       .split('\n')
       .map((line) => new Paragraph({ children: [new TextRun({ text: line, bold })] })),
+  })
+}
+
+function twoColKeyValueTable(rows) {
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: rows.map(
+      (row) =>
+        new TableRow({
+          children: [
+            makeCell(row.label, { bold: true, width: 30, shading: 'F7F5F0' }),
+            makeCell(row.value, { width: 70 }),
+          ],
+        })
+    ),
+  })
+}
+
+function cpTable(rows) {
+  if (!rows || rows.length === 0) return bodyText('-')
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({
+        children: [
+          makeCell('Elemen', { bold: true, width: 25, shading: 'F0EDE3' }),
+          makeCell('Capaian Pembelajaran', { bold: true, width: 75, shading: 'F0EDE3' }),
+        ],
+      }),
+      ...rows.map(
+        (row) =>
+          new TableRow({
+            children: [makeCell(row.elemen, { width: 25 }), makeCell(row.capaian, { width: 75 })],
+          })
+      ),
+    ],
   })
 }
 
@@ -103,9 +144,76 @@ function glosariumTable(items) {
   })
 }
 
+function pengesahanSection(identitas) {
+  const tanggal = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  const blank = (n) => Array.from({ length: n }, () => new Paragraph({ text: '' }))
+
+  return [
+    new Paragraph({
+      text: '',
+      spacing: { before: 400 },
+      border: { top: { style: BorderStyle.SINGLE, size: 6, color: '1F3D2B' } },
+    }),
+    new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      alignment: AlignmentType.CENTER,
+      text: 'Lembar Pengesahan',
+      spacing: { before: 200, after: 200 },
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      text: `${identitas.sekolah || '.....................'}, ${tanggal}`,
+      spacing: { after: 200 },
+    }),
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [
+                new Paragraph({ text: 'Mengetahui,', alignment: AlignmentType.CENTER }),
+                new Paragraph({ text: 'Kepala Sekolah', alignment: AlignmentType.CENTER }),
+                ...blank(3),
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [new TextRun({ text: identitas.kepalaSekolah || '.....................', bold: true, underline: {} })],
+                }),
+                new Paragraph({ text: 'NIP. .....................', alignment: AlignmentType.CENTER }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [
+                new Paragraph({ text: ' ', alignment: AlignmentType.CENTER }),
+                new Paragraph({ text: 'Guru Mata Pelajaran', alignment: AlignmentType.CENTER }),
+                ...blank(3),
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [new TextRun({ text: identitas.namaGuru || '.....................', bold: true, underline: {} })],
+                }),
+                new Paragraph({ text: 'NIP. .....................', alignment: AlignmentType.CENTER }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    }),
+  ]
+}
+
 export async function exportModulToDocx({ identitas, cp, tp, hasil }) {
   const langkah = hasil.langkahPembelajaran || {}
   const asesmen = hasil.asesmen || {}
+  const remedialPengayaan = hasil.remedialPengayaan || {}
 
   const children = [
     new Paragraph({
@@ -121,36 +229,24 @@ export async function exportModulToDocx({ identitas, cp, tp, hasil }) {
       spacing: { after: 300 },
     }),
 
-    new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: [
-        new TableRow({
-          children: [
-            makeCell('Nama Guru', { bold: true, width: 25, shading: 'F7F5F0' }),
-            makeCell(identitas.namaGuru || '-', { width: 25 }),
-            makeCell('Sekolah', { bold: true, width: 25, shading: 'F7F5F0' }),
-            makeCell(identitas.sekolah || '-', { width: 25 }),
-          ],
-        }),
-        new TableRow({
-          children: [
-            makeCell('Fase / Kelas', { bold: true, width: 25, shading: 'F7F5F0' }),
-            makeCell(identitas.faseKelas || '-', { width: 25 }),
-            makeCell('Alokasi Waktu', { bold: true, width: 25, shading: 'F7F5F0' }),
-            makeCell(identitas.alokasiWaktu || '-', { width: 25 }),
-          ],
-        }),
-      ],
-    }),
+    heading('Identitas Modul'),
+    twoColKeyValueTable([
+      { label: 'Nama Guru', value: identitas.namaGuru },
+      { label: 'Sekolah', value: identitas.sekolah },
+      { label: 'Kepala Sekolah', value: identitas.kepalaSekolah },
+      { label: 'Mata Pelajaran', value: identitas.mapel },
+      { label: 'Fase / Kelas', value: identitas.faseKelas },
+      { label: 'Alokasi Waktu', value: identitas.alokasiWaktu },
+    ]),
 
     heading('Capaian Pembelajaran (CP)'),
-    bodyText(cp),
+    Array.isArray(hasil.cpTerstruktur) && hasil.cpTerstruktur.length > 0 ? cpTable(hasil.cpTerstruktur) : bodyText(cp),
 
     heading('Tujuan Pembelajaran (TP)'),
     bodyText(tp),
 
-    heading('Profil Pelajar Pancasila'),
-    ...bulletList(hasil.profilPelajarPancasila),
+    heading('8 Dimensi Profil Lulusan'),
+    ...bulletList(hasil.delapanDimensiProfilLulusan),
 
     heading('Model Pembelajaran'),
     bodyText(hasil.modelPembelajaran),
@@ -168,9 +264,9 @@ export async function exportModulToDocx({ identitas, cp, tp, hasil }) {
     ...bulletList(hasil.pertanyaanPemantik),
 
     heading('Langkah-Langkah Pembelajaran'),
-    ...labeledBullets('Pendahuluan', langkah.pendahuluan),
-    ...labeledBullets('Inti', langkah.inti),
-    ...labeledBullets('Penutup', langkah.penutup),
+    ...tahapSection('Pendahuluan', langkah.pendahuluan),
+    ...tahapSection('Inti', langkah.inti),
+    ...tahapSection('Penutup', langkah.penutup),
 
     heading('Rencana Asesmen'),
     ...labeledBullets('Asesmen Formatif', asesmen.formatif),
@@ -178,6 +274,10 @@ export async function exportModulToDocx({ identitas, cp, tp, hasil }) {
 
     heading('Rubrik Penilaian'),
     rubrikTable(hasil.rubrikPenilaian),
+
+    heading('Program Remedial dan Pengayaan'),
+    ...labeledBullets('Remedial', remedialPengayaan.remedial),
+    ...labeledBullets('Pengayaan', remedialPengayaan.pengayaan),
 
     heading('Refleksi Guru'),
     ...bulletList(hasil.refleksiGuru),
@@ -193,6 +293,8 @@ export async function exportModulToDocx({ identitas, cp, tp, hasil }) {
 
     heading('Lampiran — Lembar Kerja Peserta Didik (LKPD)'),
     ...bulletList(hasil.lkpd),
+
+    ...pengesahanSection(identitas),
   ]
 
   const doc = new Document({
