@@ -24,12 +24,14 @@ function ListOrText({ content }) {
   return <p className="whitespace-pre-line">{content}</p>
 }
 
-function TahapKegiatan({ label, items }) {
-  if (!items) return null
+function TahapKegiatan({ label, tahap }) {
+  if (!tahap) return null
   return (
     <div className="mb-4 last:mb-0">
-      <p className="text-xs font-mono uppercase tracking-wide text-teal-line mb-1.5">{label}</p>
-      <ListOrText content={items} />
+      <p className="text-xs font-mono uppercase tracking-wide text-teal-line mb-1.5">
+        {label} {tahap.durasi && <span className="normal-case text-tinta-soft">({tahap.durasi})</span>}
+      </p>
+      <ListOrText content={tahap.kegiatan} />
     </div>
   )
 }
@@ -55,6 +57,7 @@ export default function ModulPreview({ identitas, cp, tp, hasil, onCetak }) {
   const [downloading, setDownloading] = useState(false)
   const langkah = hasil.langkahPembelajaran || {}
   const asesmen = hasil.asesmen || {}
+  const remedialPengayaan = hasil.remedialPengayaan || {}
 
   async function handleUnduhWord() {
     setDownloading(true)
@@ -88,140 +91,4 @@ export default function ModulPreview({ identitas, cp, tp, hasil, onCetak }) {
             onClick={onCetak}
             className="inline-flex items-center gap-2 rounded-lg bg-papan text-kapur px-4 py-2 text-sm font-medium hover:bg-papan-dark transition-colors"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/>
-            </svg>
-            Cetak ke PDF
-          </button>
-        </div>
-      </div>
-
-      <div id="cetak-area" className="bg-white rounded-2xl border border-papan/10 shadow-sm p-6 sm:p-10 print:shadow-none print:border-none">
-        {/* Kop Modul */}
-        <div className="text-center border-b-2 border-papan pb-4 mb-6">
-          <p className="font-mono text-xs tracking-widest text-teal-line uppercase mb-1">Modul Ajar — Kurikulum Merdeka</p>
-          <h1 className="font-display text-xl font-bold text-papan">{identitas.mapel || 'Mata Pelajaran'}</h1>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm mb-8">
-          <p><span className="text-tinta-soft">Nama Guru</span><br/><span className="font-medium">{identitas.namaGuru}</span></p>
-          <p><span className="text-tinta-soft">Sekolah</span><br/><span className="font-medium">{identitas.sekolah}</span></p>
-          <p><span className="text-tinta-soft">Fase / Kelas</span><br/><span className="font-medium">{identitas.faseKelas}</span></p>
-          <p><span className="text-tinta-soft">Alokasi Waktu</span><br/><span className="font-medium">{identitas.alokasiWaktu}</span></p>
-        </div>
-
-        <Block title="Capaian Pembelajaran (CP)">
-          <p className="whitespace-pre-line">{cp}</p>
-        </Block>
-
-        <Block title="Tujuan Pembelajaran (TP)">
-          <p className="whitespace-pre-line">{tp}</p>
-        </Block>
-
-        {hasil.profilPelajarPancasila && (
-          <Block title="Profil Pelajar Pancasila">
-            <ListOrText content={hasil.profilPelajarPancasila} />
-          </Block>
-        )}
-
-        {(hasil.modelPembelajaran || hasil.saranaPrasarana || hasil.targetPesertaDidik) && (
-          <Block title="Identitas Kegiatan">
-            <KeyValueTable
-              rows={[
-                hasil.modelPembelajaran && { label: 'Model Pembelajaran', value: hasil.modelPembelajaran },
-                hasil.saranaPrasarana && {
-                  label: 'Sarana & Prasarana',
-                  value: Array.isArray(hasil.saranaPrasarana) ? hasil.saranaPrasarana.join(', ') : hasil.saranaPrasarana,
-                },
-                hasil.targetPesertaDidik && { label: 'Target Peserta Didik', value: hasil.targetPesertaDidik },
-              ].filter(Boolean)}
-            />
-          </Block>
-        )}
-
-        <Block title="Pemahaman Bermakna">
-          <ListOrText content={hasil.pemahamanBermakna} />
-        </Block>
-
-        <Block title="Pertanyaan Pemantik">
-          <ListOrText content={hasil.pertanyaanPemantik} />
-        </Block>
-
-        <Block title="Langkah-Langkah Pembelajaran">
-          <TahapKegiatan label="Pendahuluan" items={langkah.pendahuluan} />
-          <TahapKegiatan label="Inti" items={langkah.inti} />
-          <TahapKegiatan label="Penutup" items={langkah.penutup} />
-        </Block>
-
-        <Block title="Rencana Asesmen">
-          <TahapKegiatan label="Asesmen Formatif" items={asesmen.formatif} />
-          <TahapKegiatan label="Asesmen Sumatif" items={asesmen.sumatif} />
-        </Block>
-
-        <Block title="Rubrik Penilaian">
-          {Array.isArray(hasil.rubrikPenilaian) ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border border-papan/15">
-                <thead>
-                  <tr className="bg-kapur">
-                    <th className="border border-papan/15 px-3 py-2 text-left">Aspek</th>
-                    <th className="border border-papan/15 px-3 py-2 text-left">Kriteria</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hasil.rubrikPenilaian.map((row, i) => (
-                    <tr key={i}>
-                      <td className="border border-papan/15 px-3 py-2 align-top font-medium">{row.aspek}</td>
-                      <td className="border border-papan/15 px-3 py-2 align-top whitespace-pre-line">{row.kriteria}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <ListOrText content={hasil.rubrikPenilaian} />
-          )}
-        </Block>
-
-        {hasil.refleksiGuru && (
-          <Block title="Refleksi Guru">
-            <ListOrText content={hasil.refleksiGuru} />
-          </Block>
-        )}
-
-        {hasil.refleksiPesertaDidik && (
-          <Block title="Refleksi Peserta Didik">
-            <ListOrText content={hasil.refleksiPesertaDidik} />
-          </Block>
-        )}
-
-        {hasil.glosarium && (
-          <Block title="Glosarium">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border border-papan/15">
-                <tbody>
-                  {hasil.glosarium.map((item, i) => (
-                    <tr key={i}>
-                      <td className="border border-papan/15 px-3 py-2 align-top font-medium w-1/3">{item.istilah}</td>
-                      <td className="border border-papan/15 px-3 py-2 align-top">{item.penjelasan}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Block>
-        )}
-
-        {hasil.daftarPustaka && (
-          <Block title="Daftar Pustaka">
-            <ListOrText content={hasil.daftarPustaka} />
-          </Block>
-        )}
-
-        <Block title="Lampiran — Lembar Kerja Peserta Didik (LKPD)">
-          <ListOrText content={hasil.lkpd} />
-        </Block>
-      </div>
-    </div>
-  )
-}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
