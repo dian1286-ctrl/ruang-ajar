@@ -15,7 +15,7 @@ export default function Header() {
           </div>
         </div>
         
-          href="https://guru.kemendikdasmen.go.id/kurikulum-merdeka"
+          <a href="https://guru.kemendikdasmen.go.id/kurikulum-merdeka"
           target="_blank"
           rel="noreferrer"
           className="hidden sm:inline-block text-sm text-teal-line hover:text-papan transition-colors underline underline-offset-4 decoration-teal-line/40"
