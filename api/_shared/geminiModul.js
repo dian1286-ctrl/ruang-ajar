@@ -146,4 +146,60 @@ Susun seluruh komponen berikut dalam Bahasa Indonesia yang jelas, konkret, dan k
 7. pertanyaanPemantik: 3-4 pertanyaan pemantik, urutkan dari sederhana ke lebih dalam.
 8. langkahPembelajaran: untuk MASING-MASING dari pendahuluan, inti, dan penutup, berikan:
    - "durasi": SATU perkiraan total waktu untuk keseluruhan tahap itu saja (mis. "10 menit"), TOTAL ketiga durasi harus sesuai dengan alokasi waktu yang tersedia (${identitas.alokasiWaktu}).
-   - "kegiatan": daftar poin kegiatan konkret dan actionable TANPA mencantumkan menit di masing-masing poin (jangan tulis estimasi waktu per poin, cukup di field "durasi" saja). Pendahuluan 4-5 poin (salam & doa, presensi, apersepsi, penyampaian tujuan, motivasi). Inti 6-8 poin (kembangkan ide guru menjadi tahapan runtut dan rinci, sebutkan pengelompokan siswa dan peran guru). Penutup 3-4 poin (kesimpulan bersama, refleksi singkat, tindak lanjut, doa
+   - "kegiatan": daftar poin kegiatan konkret dan actionable TANPA mencantumkan menit di masing-masing poin (jangan tulis estimasi waktu per poin, cukup di field "durasi" saja). Pendahuluan 4-5 poin (salam & doa, presensi, apersepsi, penyampaian tujuan, motivasi). Inti 6-8 poin (kembangkan ide guru menjadi tahapan runtut dan rinci, sebutkan pengelompokan siswa dan peran guru). Penutup 3-4 poin (kesimpulan bersama, refleksi singkat, tindak lanjut, doa penutup).
+9. asesmen: formatif (2-3 poin, instrumen konkret selama proses) dan sumatif (2-3 poin, instrumen di akhir pembelajaran).
+10. rubrikPenilaian: 3-4 baris. Setiap baris "aspek" dan "kriteria" — uraikan 4 level capaian (Sangat Baik/Baik/Cukup/Perlu Bimbingan) dalam satu string dipisah baris baru per level.
+11. remedialPengayaan:
+    - "remedial": 2-3 poin kegiatan remedial untuk peserta didik yang belum mencapai TP (mis. pembelajaran ulang dengan pendekatan berbeda, tutor sebaya, tugas terbimbing).
+    - "pengayaan": 2-3 poin kegiatan pengayaan untuk peserta didik yang sudah mencapai/melampaui TP (mis. proyek lanjutan, bacaan/tantangan tambahan, menjadi tutor sebaya).
+12. lkpd: 5-7 poin instruksi Lembar Kerja Peserta Didik yang runtut dan siap dibagikan, sesuai kegiatan inti.
+13. refleksiGuru: 3 pertanyaan reflektif untuk guru evaluasi diri setelah mengajar.
+14. refleksiPesertaDidik: 3 pertanyaan reflektif sederhana untuk peserta didik.
+15. glosarium: 3-5 istilah kunci dari materi beserta penjelasan singkat.
+16. daftarPustaka: 2-3 referensi yang relevan dan masuk akal.
+
+Kembalikan HANYA JSON sesuai skema yang diberikan, tanpa teks tambahan, tanpa markdown code fence.`
+}
+
+/**
+ * Validates input and calls Gemini, returning a plain result object:
+ * { ok: true, data } or { ok: false, status, error }
+ */
+export async function generateModul({ apiKey, identitas, cp, tp, kegiatan }) {
+  if (!apiKey) {
+    return { ok: false, status: 500, error: 'GEMINI_API_KEY belum dikonfigurasi di server.' }
+  }
+
+  if (!identitas || !cp?.trim() || !tp?.trim() || !kegiatan?.trim()) {
+    return { ok: false, status: 400, error: 'Data tidak lengkap. Mohon isi semua kolom yang diperlukan.' }
+  }
+
+  try {
+    const ai = new GoogleGenAI({ apiKey })
+    const prompt = buildPrompt({ identitas, cp, tp, kegiatan })
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: RESPONSE_SCHEMA,
+        temperature: 0.6,
+      },
+    })
+
+    const text = response.text
+
+    let parsed
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      return { ok: false, status: 502, error: 'AI mengembalikan format yang tidak terbaca. Silakan coba lagi.' }
+    }
+
+    return { ok: true, data: parsed }
+  } catch (err) {
+    console.error('Gemini API error:', err)
+    return { ok: false, status: 500, error: 'Gagal menghubungi layanan AI. Silakan coba beberapa saat lagi.' }
+  }
+}
