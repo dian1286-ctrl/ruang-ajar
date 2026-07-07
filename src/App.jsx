@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from './components/Header.jsx'
 import IdentitasForm from './components/IdentitasForm.jsx'
 import { CPForm, TPForm } from './components/CPTPForm.jsx'
@@ -9,9 +9,42 @@ import LoadingSpinner from './components/LoadingSpinner.jsx'
 const INITIAL_IDENTITAS = {
   namaGuru: '',
   sekolah: '',
+  kepalaSekolah: '',
   mapel: '',
   faseKelas: '',
   alokasiWaktu: '',
+}
+
+const RIWAYAT_KEY = 'ruangajar_riwayat_identitas'
+const MAX_RIWAYAT = 5
+
+function loadRiwayat() {
+  try {
+    const raw = localStorage.getItem(RIWAYAT_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function saveRiwayat(identitas) {
+  try {
+    const existing = loadRiwayat()
+    const entry = {
+      namaGuru: identitas.namaGuru,
+      sekolah: identitas.sekolah,
+      kepalaSekolah: identitas.kepalaSekolah,
+    }
+    // Remove duplicate (same guru + sekolah), then put newest first
+    const filtered = existing.filter(
+      (r) => !(r.namaGuru === entry.namaGuru && r.sekolah === entry.sekolah)
+    )
+    const updated = [entry, ...filtered].slice(0, MAX_RIWAYAT)
+    localStorage.setItem(RIWAYAT_KEY, JSON.stringify(updated))
+    return updated
+  } catch {
+    return loadRiwayat()
+  }
 }
 
 export default function App() {
@@ -19,13 +52,27 @@ export default function App() {
   const [cp, setCp] = useState('')
   const [tp, setTp] = useState('')
   const [kegiatan, setKegiatan] = useState('')
+  const [riwayat, setRiwayat] = useState([])
 
   const [status, setStatus] = useState('idle') // idle | loading | success | error
   const [errorMsg, setErrorMsg] = useState('')
   const [hasil, setHasil] = useState(null)
 
+  useEffect(() => {
+    setRiwayat(loadRiwayat())
+  }, [])
+
+  function handlePilihRiwayat(r) {
+    setIdentitas((prev) => ({
+      ...prev,
+      namaGuru: r.namaGuru,
+      sekolah: r.sekolah,
+      kepalaSekolah: r.kepalaSekolah,
+    }))
+  }
+
   const isFormValid =
-    identitas.namaGuru && identitas.sekolah && identitas.mapel &&
+    identitas.namaGuru && identitas.sekolah && identitas.kepalaSekolah && identitas.mapel &&
     identitas.faseKelas && identitas.alokasiWaktu &&
     cp.trim() && tp.trim() && kegiatan.trim()
 
@@ -52,6 +99,7 @@ export default function App() {
 
       setHasil(data)
       setStatus('success')
+      setRiwayat(saveRiwayat(identitas))
 
       // Scroll to preview
       setTimeout(() => {
@@ -84,7 +132,12 @@ export default function App() {
         </div>
 
         <form onSubmit={handleGenerate} className="space-y-6 no-print">
-          <IdentitasForm data={identitas} onChange={setIdentitas} />
+          <IdentitasForm
+            data={identitas}
+            onChange={setIdentitas}
+            riwayat={riwayat}
+            onPilihRiwayat={handlePilihRiwayat}
+          />
           <CPForm value={cp} onChange={setCp} />
           <TPForm value={tp} onChange={setTp} />
           <KegiatanForm value={kegiatan} onChange={setKegiatan} />
