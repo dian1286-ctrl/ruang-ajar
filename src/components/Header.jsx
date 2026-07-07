@@ -14,8 +14,8 @@ export default function Header() {
             <p className="text-xs text-tinta-soft mt-1 tracking-wide">Generator Modul Ajar Kurikulum Merdeka</p>
           </div>
         </div>
-        <a
-          href="https://guru.kemdikbud.go.id/kurikulum/"
+        
+          href="https://guru.kemendikdasmen.go.id/kurikulum-merdeka"
           target="_blank"
           rel="noreferrer"
           className="hidden sm:inline-block text-sm text-teal-line hover:text-papan transition-colors underline underline-offset-4 decoration-teal-line/40"
