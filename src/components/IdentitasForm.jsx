@@ -1,5 +1,5 @@
 import SectionCard from './SectionCard.jsx'
-import { TextField } from './Field.jsx'
+import { TextField, NumberField } from './Field.jsx'
 
 export default function IdentitasForm({ data, onChange, riwayat, onPilihRiwayat }) {
   const set = (key) => (val) => onChange({ ...data, [key]: val })
@@ -34,7 +34,16 @@ export default function IdentitasForm({ data, onChange, riwayat, onPilihRiwayat 
         <TextField label="Nama Kepala Sekolah" value={data.kepalaSekolah} onChange={set('kepalaSekolah')} placeholder="cth. Ahmad Fauzi, S.Pd., M.Pd." required />
         <TextField label="Mata Pelajaran" value={data.mapel} onChange={set('mapel')} placeholder="cth. Bahasa Indonesia" required />
         <TextField label="Fase / Kelas" value={data.faseKelas} onChange={set('faseKelas')} placeholder="cth. Fase D / Kelas VIII" required />
-        <TextField label="Alokasi Waktu" value={data.alokasiWaktu} onChange={set('alokasiWaktu')} placeholder="cth. 2 x 40 menit (1 pertemuan)" required />
+        <TextField label="Alokasi Waktu (per pertemuan)" value={data.alokasiWaktu} onChange={set('alokasiWaktu')} placeholder="cth. 2 x 40 menit" required />
+        <NumberField
+          label="Jumlah Pertemuan"
+          value={data.jumlahPertemuan}
+          onChange={set('jumlahPertemuan')}
+          min={1}
+          max={12}
+          hint="Untuk 1 bab dengan beberapa pertemuan"
+          required
+        />
       </div>
     </SectionCard>
   )
