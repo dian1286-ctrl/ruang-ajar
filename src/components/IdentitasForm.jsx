@@ -1,7 +1,7 @@
 import SectionCard from './SectionCard.jsx'
 import { TextField, NumberField } from './Field.jsx'
 
-export default function IdentitasForm({ data, onChange, riwayat, onPilihRiwayat }) {
+export default function IdentitasForm({ data, onChange }) {
   const set = (key) => (val) => onChange({ ...data, [key]: val })
 
   return (
@@ -10,24 +10,6 @@ export default function IdentitasForm({ data, onChange, riwayat, onPilihRiwayat 
       title="Identitas Modul"
       description="Data ini akan muncul di kop Modul Ajar."
     >
-      {riwayat && riwayat.length > 0 && (
-        <div className="mb-2 -mt-1">
-          <p className="text-xs text-tinta-soft mb-2">Isi cepat dari riwayat sebelumnya:</p>
-          <div className="flex flex-wrap gap-2">
-            {riwayat.map((r, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onPilihRiwayat(r)}
-                className="text-xs rounded-full border border-papan/20 bg-kapur px-3 py-1.5 hover:bg-papan hover:text-kapur transition-colors"
-              >
-                {r.namaGuru} — {r.sekolah}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="grid sm:grid-cols-2 gap-4">
         <TextField label="Nama Guru" value={data.namaGuru} onChange={set('namaGuru')} placeholder="cth. Siti Rahma, S.Pd." required />
         <TextField label="Nama Sekolah" value={data.sekolah} onChange={set('sekolah')} placeholder="cth. SMP Negeri 1 Malang" required />
