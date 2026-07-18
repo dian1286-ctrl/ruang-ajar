@@ -192,18 +192,43 @@ Susun KHUSUS untuk pertemuan ke-${pertemuanKe} ini saja:
 Kembalikan HANYA JSON sesuai skema yang diberikan, tanpa teks tambahan, tanpa markdown code fence.`
 }
 
+function isRateLimitError(err) {
+  const msg = String(err?.message || err)
+  return err?.status === 429 || /\b429\b/.test(msg) || /RESOURCE_EXHAUSTED|quota/i.test(msg)
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function callGemini({ apiKey, prompt, schema }) {
   const ai = new GoogleGenAI({ apiKey })
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: schema,
-      temperature: 0.6,
-    },
-  })
-  return JSON.parse(response.text)
+  const maxRetries = 3
+  let lastErr
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: 0.6,
+        },
+      })
+      return JSON.parse(response.text)
+    } catch (err) {
+      lastErr = err
+      if (isRateLimitError(err) && attempt < maxRetries) {
+        // Exponential backoff: 3s, 6s, 9s before retrying
+        await sleep(3000 * (attempt + 1))
+        continue
+      }
+      throw err
+    }
+  }
+  throw lastErr
 }
 
 /**
@@ -224,7 +249,10 @@ export async function generateModulInti({ apiKey, identitas, cp, tp, kegiatan, j
     return { ok: true, data }
   } catch (err) {
     console.error('Gemini API error (inti):', err)
-    return { ok: false, status: 500, error: 'Gagal menghubungi layanan AI untuk bagian inti modul. Silakan coba lagi.' }
+    const error = isRateLimitError(err)
+      ? 'Kuota AI Gemini sedang penuh (terlalu banyak permintaan dalam waktu singkat). Tunggu 1-2 menit lalu coba lagi. Kalau sering terjadi, pertimbangkan aktifkan billing di Google AI Studio untuk kuota lebih besar.'
+      : 'Gagal menghubungi layanan AI untuk bagian inti modul. Silakan coba lagi.'
+    return { ok: false, status: 500, error }
   }
 }
 
@@ -253,6 +281,9 @@ export async function generatePertemuan({ apiKey, identitas, cp, tp, kegiatan, p
     return { ok: true, data }
   } catch (err) {
     console.error(`Gemini API error (pertemuan ${pertemuanKe}):`, err)
-    return { ok: false, status: 500, error: `Gagal menyusun pertemuan ke-${pertemuanKe}. Silakan coba lagi.` }
+    const error = isRateLimitError(err)
+      ? 'Kuota AI Gemini sedang penuh (terlalu banyak permintaan dalam waktu singkat). Tunggu 1-2 menit lalu coba lagi.'
+      : `Gagal menyusun pertemuan ke-${pertemuanKe}. Silakan coba lagi.`
+    return { ok: false, status: 500, error }
   }
 }
