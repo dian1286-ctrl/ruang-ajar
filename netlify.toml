@@ -4,8 +4,13 @@
   functions = "netlify/functions"
 
 [[redirects]]
-  from = "/api/generate"
-  to = "/.netlify/functions/generate"
+  from = "/api/generate-inti"
+  to = "/.netlify/functions/generate-inti"
+  status = 200
+
+[[redirects]]
+  from = "/api/generate-pertemuan"
+  to = "/.netlify/functions/generate-pertemuan"
   status = 200
 
 [[redirects]]
