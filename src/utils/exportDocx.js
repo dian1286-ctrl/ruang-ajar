@@ -16,10 +16,10 @@ import { saveAs } from 'file-saver'
 const THIN_BORDER = { style: BorderStyle.SINGLE, size: 2, color: 'CCCCCC' }
 const CELL_BORDERS = { top: THIN_BORDER, bottom: THIN_BORDER, left: THIN_BORDER, right: THIN_BORDER }
 
-function heading(text) {
+function heading(text, level = HeadingLevel.HEADING_2) {
   return new Paragraph({
     text,
-    heading: HeadingLevel.HEADING_2,
+    heading: level,
     spacing: { before: 300, after: 150 },
   })
 }
@@ -53,6 +53,17 @@ function labeledBullets(label, items) {
 function tahapSection(label, tahap) {
   const durasiSuffix = tahap?.durasi ? ` (${tahap.durasi})` : ''
   return labeledBullets(`${label}${durasiSuffix}`, tahap?.kegiatan)
+}
+
+function pertemuanSection(p) {
+  const langkah = p.langkahPembelajaran || {}
+  return [
+    heading(`Pertemuan ${p.nomor}`, HeadingLevel.HEADING_3),
+    ...tahapSection('Pendahuluan', langkah.pendahuluan),
+    ...tahapSection('Inti', langkah.inti),
+    ...tahapSection('Penutup', langkah.penutup),
+    ...labeledBullets(`LKPD Pertemuan ${p.nomor}`, p.lkpd),
+  ]
 }
 
 function makeCell(text, { bold = false, width, shading } = {}) {
@@ -211,9 +222,9 @@ function pengesahanSection(identitas) {
 }
 
 export async function exportModulToDocx({ identitas, cp, tp, hasil }) {
-  const langkah = hasil.langkahPembelajaran || {}
   const asesmen = hasil.asesmen || {}
   const remedialPengayaan = hasil.remedialPengayaan || {}
+  const pertemuan = hasil.pertemuan || []
 
   const children = [
     new Paragraph({
@@ -236,7 +247,8 @@ export async function exportModulToDocx({ identitas, cp, tp, hasil }) {
       { label: 'Kepala Sekolah', value: identitas.kepalaSekolah },
       { label: 'Mata Pelajaran', value: identitas.mapel },
       { label: 'Fase / Kelas', value: identitas.faseKelas },
-      { label: 'Alokasi Waktu', value: identitas.alokasiWaktu },
+      { label: 'Alokasi Waktu per Pertemuan', value: identitas.alokasiWaktu },
+      { label: 'Jumlah Pertemuan', value: String(identitas.jumlahPertemuan || 1) },
     ]),
 
     heading('Capaian Pembelajaran (CP)'),
@@ -263,10 +275,8 @@ export async function exportModulToDocx({ identitas, cp, tp, hasil }) {
     heading('Pertanyaan Pemantik'),
     ...bulletList(hasil.pertanyaanPemantik),
 
-    heading('Langkah-Langkah Pembelajaran'),
-    ...tahapSection('Pendahuluan', langkah.pendahuluan),
-    ...tahapSection('Inti', langkah.inti),
-    ...tahapSection('Penutup', langkah.penutup),
+    heading('Langkah Pembelajaran & LKPD per Pertemuan'),
+    ...pertemuan.flatMap((p) => pertemuanSection(p)),
 
     heading('Rencana Asesmen'),
     ...labeledBullets('Asesmen Formatif', asesmen.formatif),
@@ -290,9 +300,6 @@ export async function exportModulToDocx({ identitas, cp, tp, hasil }) {
 
     heading('Daftar Pustaka'),
     ...bulletList(hasil.daftarPustaka),
-
-    heading('Lampiran — Lembar Kerja Peserta Didik (LKPD)'),
-    ...bulletList(hasil.lkpd),
 
     ...pengesahanSection(identitas),
   ]
