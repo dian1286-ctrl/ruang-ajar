@@ -53,11 +53,29 @@ function KeyValueTable({ rows }) {
   )
 }
 
+function PertemuanBlock({ p }) {
+  const langkah = p.langkahPembelajaran || {}
+  return (
+    <div className="mb-8 last:mb-0 rounded-xl border border-papan/10 p-4 sm:p-5 bg-kapur/40">
+      <p className="font-display text-sm font-semibold text-papan mb-3">Pertemuan {p.nomor}</p>
+      <TahapKegiatan label="Pendahuluan" tahap={langkah.pendahuluan} />
+      <TahapKegiatan label="Inti" tahap={langkah.inti} />
+      <TahapKegiatan label="Penutup" tahap={langkah.penutup} />
+      {p.lkpd && (
+        <div className="mt-4 pt-4 border-t border-papan/10">
+          <p className="text-xs font-mono uppercase tracking-wide text-teal-line mb-1.5">LKPD Pertemuan {p.nomor}</p>
+          <ListOrText content={p.lkpd} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ModulPreview({ identitas, cp, tp, hasil, onCetak }) {
   const [downloading, setDownloading] = useState(false)
-  const langkah = hasil.langkahPembelajaran || {}
   const asesmen = hasil.asesmen || {}
   const remedialPengayaan = hasil.remedialPengayaan || {}
+  const pertemuan = hasil.pertemuan || []
 
   async function handleUnduhWord() {
     setDownloading(true)
@@ -114,7 +132,8 @@ export default function ModulPreview({ identitas, cp, tp, hasil, onCetak }) {
               { label: 'Kepala Sekolah', value: identitas.kepalaSekolah },
               { label: 'Mata Pelajaran', value: identitas.mapel },
               { label: 'Fase / Kelas', value: identitas.faseKelas },
-              { label: 'Alokasi Waktu', value: identitas.alokasiWaktu },
+              { label: 'Alokasi Waktu per Pertemuan', value: identitas.alokasiWaktu },
+              { label: 'Jumlah Pertemuan', value: String(identitas.jumlahPertemuan || 1) },
             ]}
           />
         </Block>
@@ -177,10 +196,10 @@ export default function ModulPreview({ identitas, cp, tp, hasil, onCetak }) {
           <ListOrText content={hasil.pertanyaanPemantik} />
         </Block>
 
-        <Block title="Langkah-Langkah Pembelajaran">
-          <TahapKegiatan label="Pendahuluan" tahap={langkah.pendahuluan} />
-          <TahapKegiatan label="Inti" tahap={langkah.inti} />
-          <TahapKegiatan label="Penutup" tahap={langkah.penutup} />
+        <Block title={pertemuan.length > 1 ? 'Langkah Pembelajaran & LKPD per Pertemuan' : 'Langkah-Langkah Pembelajaran & LKPD'}>
+          {pertemuan.map((p) => (
+            <PertemuanBlock key={p.nomor} p={p} />
+          ))}
         </Block>
 
         <Block title="Rencana Asesmen">
@@ -266,10 +285,6 @@ export default function ModulPreview({ identitas, cp, tp, hasil, onCetak }) {
             <ListOrText content={hasil.daftarPustaka} />
           </Block>
         )}
-
-        <Block title="Lampiran — Lembar Kerja Peserta Didik (LKPD)">
-          <ListOrText content={hasil.lkpd} />
-        </Block>
 
         {/* Lembar Pengesahan */}
         <div className="mt-10 pt-6 border-t-2 border-papan">
