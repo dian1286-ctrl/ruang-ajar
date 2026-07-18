@@ -13,6 +13,7 @@ const INITIAL_IDENTITAS = {
   mapel: '',
   faseKelas: '',
   alokasiWaktu: '',
+  jumlahPertemuan: 1,
 }
 
 const RIWAYAT_KEY = 'ruangajar_riwayat_identitas'
@@ -35,7 +36,6 @@ function saveRiwayat(identitas) {
       sekolah: identitas.sekolah,
       kepalaSekolah: identitas.kepalaSekolah,
     }
-    // Remove duplicate (same guru + sekolah), then put newest first
     const filtered = existing.filter(
       (r) => !(r.namaGuru === entry.namaGuru && r.sekolah === entry.sekolah)
     )
@@ -47,6 +47,19 @@ function saveRiwayat(identitas) {
   }
 }
 
+async function postJSON(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json()
+  if (!res.ok) {
+    throw new Error(data?.error || 'Gagal menghasilkan modul. Silakan coba lagi.')
+  }
+  return data
+}
+
 export default function App() {
   const [identitas, setIdentitas] = useState(INITIAL_IDENTITAS)
   const [cp, setCp] = useState('')
@@ -55,6 +68,7 @@ export default function App() {
   const [riwayat, setRiwayat] = useState([])
 
   const [status, setStatus] = useState('idle') // idle | loading | success | error
+  const [loadingLabel, setLoadingLabel] = useState('Menyusun modul...')
   const [errorMsg, setErrorMsg] = useState('')
   const [hasil, setHasil] = useState(null)
 
@@ -73,7 +87,7 @@ export default function App() {
 
   const isFormValid =
     identitas.namaGuru && identitas.sekolah && identitas.kepalaSekolah && identitas.mapel &&
-    identitas.faseKelas && identitas.alokasiWaktu &&
+    identitas.faseKelas && identitas.alokasiWaktu && identitas.jumlahPertemuan >= 1 &&
     cp.trim() && tp.trim() && kegiatan.trim()
 
   async function handleGenerate(e) {
@@ -84,24 +98,34 @@ export default function App() {
     setErrorMsg('')
     setHasil(null)
 
+    const jumlahPertemuan = identitas.jumlahPertemuan || 1
+
     try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identitas, cp, tp, kegiatan }),
-      })
+      setLoadingLabel('Menyusun bagian inti modul (CP, asesmen, rubrik, dll)...')
+      const inti = await postJSON('/api/generate-inti', { identitas, cp, tp, kegiatan, jumlahPertemuan })
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data?.error || 'Gagal menghasilkan modul. Silakan coba lagi.')
+      const pertemuan = []
+      for (let i = 1; i <= jumlahPertemuan; i++) {
+        setLoadingLabel(
+          jumlahPertemuan > 1
+            ? `Menyusun pertemuan ${i} dari ${jumlahPertemuan}...`
+            : 'Menyusun langkah pembelajaran...'
+        )
+        const dataPertemuan = await postJSON('/api/generate-pertemuan', {
+          identitas,
+          cp,
+          tp,
+          kegiatan,
+          pertemuanKe: i,
+          jumlahPertemuan,
+        })
+        pertemuan.push({ nomor: i, ...dataPertemuan })
       }
 
-      setHasil(data)
+      setHasil({ ...inti, pertemuan })
       setStatus('success')
       setRiwayat(saveRiwayat(identitas))
 
-      // Scroll to preview
       setTimeout(() => {
         document.getElementById('hasil-modul')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 100)
@@ -127,7 +151,7 @@ export default function App() {
           </h1>
           <p className="text-tinta-soft mt-3 max-w-2xl">
             Ruang Ajar menyusun Langkah Pembelajaran, Pemahaman Bermakna, Asesmen, Rubrik, hingga LKPD —
-            langsung dari CP, TP, dan ide kegiatan yang Anda tulis.
+            langsung dari CP, TP, dan ide kegiatan yang Anda tulis. Mendukung satu bab dengan beberapa pertemuan sekaligus.
           </p>
         </div>
 
@@ -162,7 +186,7 @@ export default function App() {
           </div>
         </form>
 
-        {status === 'loading' && <LoadingSpinner />}
+        {status === 'loading' && <LoadingSpinner label={loadingLabel} />}
 
         {status === 'success' && hasil && (
           <div id="hasil-modul" className="mt-12 scroll-mt-6">
