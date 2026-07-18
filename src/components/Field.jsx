@@ -36,3 +36,28 @@ export function TextAreaField({ label, value, onChange, placeholder, required, r
     </label>
   )
 }
+
+export function NumberField({ label, value, onChange, min = 1, max = 12, required, hint }) {
+  return (
+    <label className="block">
+      <div className="flex items-baseline justify-between">
+        <span className="text-sm font-medium text-tinta">
+          {label} {required && <span className="text-kapurkuning-dark">*</span>}
+        </span>
+        {hint && <span className="text-xs text-tinta-soft">{hint}</span>}
+      </div>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => {
+          const n = parseInt(e.target.value, 10)
+          onChange(Number.isNaN(n) ? min : Math.min(max, Math.max(min, n)))
+        }}
+        required={required}
+        className="mt-1.5 w-full rounded-lg border border-papan/15 bg-white px-3.5 py-2.5 text-sm text-tinta focus:border-papan focus:ring-1 focus:ring-papan outline-none transition-colors"
+      />
+    </label>
+  )
+}
