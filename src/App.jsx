@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Header from './components/Header.jsx'
+import RiwayatPengisian from './components/RiwayatPengisian.jsx'
 import IdentitasForm from './components/IdentitasForm.jsx'
 import { CPForm, TPForm } from './components/CPTPForm.jsx'
 import KegiatanForm from './components/KegiatanForm.jsx'
@@ -16,8 +17,8 @@ const INITIAL_IDENTITAS = {
   jumlahPertemuan: 1,
 }
 
-const RIWAYAT_KEY = 'ruangajar_riwayat_identitas'
-const MAX_RIWAYAT = 5
+const RIWAYAT_KEY = 'ruangajar_riwayat_pengisian'
+const MAX_RIWAYAT = 8
 
 function loadRiwayat() {
   try {
@@ -28,18 +29,38 @@ function loadRiwayat() {
   }
 }
 
-function saveRiwayat(identitas) {
+function saveRiwayat({ identitas, cp, tp, kegiatan }) {
   try {
     const existing = loadRiwayat()
     const entry = {
-      namaGuru: identitas.namaGuru,
-      sekolah: identitas.sekolah,
-      kepalaSekolah: identitas.kepalaSekolah,
+      id: `${Date.now()}`,
+      savedAt: new Date().toISOString(),
+      identitas,
+      cp,
+      tp,
+      kegiatan,
     }
-    const filtered = existing.filter(
-      (r) => !(r.namaGuru === entry.namaGuru && r.sekolah === entry.sekolah)
-    )
-    const updated = [entry, ...filtered].slice(0, MAX_RIWAYAT)
+
+    // Avoid saving an exact duplicate of the most recent entry
+    const isDuplicateOfLatest =
+      existing[0] &&
+      existing[0].cp === cp &&
+      existing[0].tp === tp &&
+      existing[0].kegiatan === kegiatan &&
+      JSON.stringify(existing[0].identitas) === JSON.stringify(identitas)
+
+    const updated = isDuplicateOfLatest ? existing : [entry, ...existing].slice(0, MAX_RIWAYAT)
+    localStorage.setItem(RIWAYAT_KEY, JSON.stringify(updated))
+    return updated
+  } catch {
+    return loadRiwayat()
+  }
+}
+
+function hapusRiwayat(id) {
+  try {
+    const existing = loadRiwayat()
+    const updated = existing.filter((r) => r.id !== id)
     localStorage.setItem(RIWAYAT_KEY, JSON.stringify(updated))
     return updated
   } catch {
@@ -76,13 +97,16 @@ export default function App() {
     setRiwayat(loadRiwayat())
   }, [])
 
-  function handlePilihRiwayat(r) {
-    setIdentitas((prev) => ({
-      ...prev,
-      namaGuru: r.namaGuru,
-      sekolah: r.sekolah,
-      kepalaSekolah: r.kepalaSekolah,
-    }))
+  function handlePakaiRiwayat(r) {
+    setIdentitas({ ...INITIAL_IDENTITAS, ...r.identitas })
+    setCp(r.cp || '')
+    setTp(r.tp || '')
+    setKegiatan(r.kegiatan || '')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function handleHapusRiwayat(id) {
+    setRiwayat(hapusRiwayat(id))
   }
 
   const isFormValid =
@@ -124,7 +148,7 @@ export default function App() {
 
       setHasil({ ...inti, pertemuan })
       setStatus('success')
-      setRiwayat(saveRiwayat(identitas))
+      setRiwayat(saveRiwayat({ identitas, cp, tp, kegiatan }))
 
       setTimeout(() => {
         document.getElementById('hasil-modul')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -155,13 +179,12 @@ export default function App() {
           </p>
         </div>
 
+        <div className="space-y-6 mb-6 no-print">
+          <RiwayatPengisian riwayat={riwayat} onPakai={handlePakaiRiwayat} onHapus={handleHapusRiwayat} />
+        </div>
+
         <form onSubmit={handleGenerate} className="space-y-6 no-print">
-          <IdentitasForm
-            data={identitas}
-            onChange={setIdentitas}
-            riwayat={riwayat}
-            onPilihRiwayat={handlePilihRiwayat}
-          />
+          <IdentitasForm data={identitas} onChange={setIdentitas} />
           <CPForm value={cp} onChange={setCp} />
           <TPForm value={tp} onChange={setTp} />
           <KegiatanForm value={kegiatan} onChange={setKegiatan} />
